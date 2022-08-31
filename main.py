@@ -1,8 +1,9 @@
-import gym
+from tf_agents.networks import network
 from tf_agents.environments import tf_py_environment
 from tf_agents.environments import suite_gym
 from tf_agents.environments import utils
 from tf_agents.trajectories import time_step as ts
+from tf_agents.policies import q_policy
 from tf_agents.specs import tensor_spec
 import tensorflow as tf
 
@@ -57,7 +58,7 @@ for i in range(num_steps):
 np_transitions = tf.nest.map_structure(lambda x: x.numpy(), transitions)
 print("Historical game trajectories: ")
 print('\n'.join(map(str, np_transitions)))
-print('Total reward:', reward.numpy())
+print('Total reward:', reward.numpy)
 print("-----")
 print("End of testing TensorFlow gameplay")
 
@@ -66,49 +67,53 @@ print("End of testing TensorFlow gameplay")
 print("___________________________________________________________________")
 print("----------------------- Deep Q-Learning ---------------------------")
 print("|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||")
+print("")
 
-# input_tensor_spec = tensor_spec.TensorSpec((4,), tf.float32)
-# time_step_spec = ts.time_step_spec(input_tensor_spec)
-# action_spec = tensor_spec.BoundedTensorSpec((),
-#                                             tf.int32,
-#                                             minimum=0,
-#                                             maximum=2)
-# num_actions = action_spec.maximum - action_spec.minimum + 1
-#
-#
-# class QNetwork(network.Network):
-#
-#   def __init__(self, input_tensor_spec, action_spec, num_actions=num_actions, name=None):
-#     super(QNetwork, self).__init__(
-#         input_tensor_spec=input_tensor_spec,
-#         state_spec=(),
-#         name=name)
-#     self._sub_layers = [
-#         tf.keras.layers.Dense(num_actions),
-#     ]
-#
-#   def call(self, inputs, step_type=None, network_state=()):
-#     del step_type
-#     inputs = tf.cast(inputs, tf.float32)
-#     for layer in self._sub_layers:
-#       inputs = layer(inputs)
-#     return inputs, network_state
-#
-#
-# batch_size = 2
-# observation = tf.ones([batch_size] + time_step_spec.observation.shape.as_list())
-# time_steps = ts.restart(observation, batch_size=batch_size)
-#
-# my_q_network = QNetwork(
-#     input_tensor_spec=input_tensor_spec,
-#     action_spec=action_spec)
-# my_q_policy = q_policy.QPolicy(
-#     time_step_spec, action_spec, q_network=my_q_network)
-# action_step = my_q_policy.action(time_steps)
-# distribution_step = my_q_policy.distribution(time_steps)
-#
-# print('Action:')
-# print(action_step.action)
-#
-# print('Action distribution:')
-# print(distribution_step.action)
+print(tf_env.observation_spec())
+print(tf_env.time_step_spec())
+
+input_tensor_spec = tensor_spec.TensorSpec((4,), tf.float32)
+time_step_spec = ts.time_step_spec(input_tensor_spec)
+action_spec = tensor_spec.BoundedTensorSpec((),
+                                            tf.int32,
+                                            minimum=0,
+                                            maximum=2)
+num_actions = action_spec.maximum - action_spec.minimum + 1
+
+
+class QNetwork(network.Network):
+
+  def __init__(self, input_tensor_spec, action_spec, num_actions=num_actions, name=None):
+    super(QNetwork, self).__init__(
+        input_tensor_spec=input_tensor_spec,
+        state_spec=(),
+        name=name)
+    self._sub_layers = [
+        tf.keras.layers.Dense(num_actions),
+    ]
+
+  def call(self, inputs, step_type=None, network_state=()):
+    del step_type
+    inputs = tf.cast(inputs, tf.float32)
+    for layer in self._sub_layers:
+      inputs = layer(inputs)
+    return inputs, network_state
+
+
+batch_size = 2
+observation = tf.ones([batch_size] + time_step_spec.observation.shape.as_list())
+time_steps = ts.restart(observation, batch_size=batch_size)
+
+my_q_network = QNetwork(
+    input_tensor_spec=input_tensor_spec,
+    action_spec=action_spec)
+my_q_policy = q_policy.QPolicy(
+    time_step_spec, action_spec, q_network=my_q_network)
+action_step = my_q_policy.action(time_steps)
+distribution_step = my_q_policy.distribution(time_steps)
+
+print('Action:')
+print(action_step.action)
+
+print('Action distribution:')
+print(distribution_step.action)
