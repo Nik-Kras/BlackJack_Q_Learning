@@ -1,3 +1,5 @@
 gym[all]
 pygame
 tensorflow
+tf_agents
+numpy
