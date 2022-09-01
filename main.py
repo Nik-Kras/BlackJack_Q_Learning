@@ -75,11 +75,21 @@ print("time_step_spec: ", tf_env.time_step_spec())
 print("action_spec: ", tf_env.action_spec())
 
 input_tensor_spec = tf_env.observation_spec()
-input_tensor_spec2 = ([tf.TensorSpec(1)] * 3, )
+input_tensor_spec2 = [tf.TensorSpec(shape=(3,))]
 
-print("input_tensor_spec2: ", input_tensor_spec2)
-time_step_spec = tf_env.time_step_spec()
+print(" MY OWN  input_tensor_spec2: ", input_tensor_spec2)
+my_time_step_spec = ts.time_step_spec(input_tensor_spec2) # My idea of rebuilding Time Step
+time_step_spec = tf_env.time_step_spec()                  # Original time Step
 action_spec = tf_env.action_spec()
+
+print(" MY OWN time_step_spec: ", my_time_step_spec)
+
+time_step = tf_env.reset()
+print("---- Real Time Step: ", time_step)
+# Convert observation tuple to observation tensor
+my_observation = tf.convert_to_tensor(np.array([y[0] for y in time_step.observation]))
+my_observation = tf.expand_dims(my_observation, axis=0)
+print("----  MY OWN Observation: ", my_observation)
 
 # input_tensor_spec = tensor_spec.TensorSpec((4,), tf.float32)
 # time_step_spec = ts.time_step_spec(input_tensor_spec)
@@ -106,7 +116,12 @@ class QNetwork(network.Network):
 
   def call(self, inputs, step_type=None, network_state=()):
     del step_type
-    inputs = tf.cast(inputs, tf.float32)
+    print("called input: ", inputs)
+    my_observation = tf.convert_to_tensor(np.array([y[0] for y in inputs]))
+    my_observation = tf.expand_dims(my_observation, axis=0)
+    print("my_observation: ", my_observation)
+    inputs = tf.cast(my_observation, tf.float32)
+    print("Final input: ", inputs)
     for layer in self._sub_layers:
       inputs = layer(inputs)
     return inputs, network_state
@@ -116,39 +131,35 @@ class QNetwork(network.Network):
 # observation = tf.ones([batch_size] + time_step_spec.observation.shape.as_list())
 # time_steps = ts.restart(observation, batch_size=batch_size)
 
-time_step1 = tf_env.reset()
-time_step2 = tf_env.reset()
-print("---- Real Time Step: ", time_step1)
-time_steps = time_step1 # [time_step1, time_step2]
-print("---- 2 batch Time Step: ", time_steps)
-
-print(time_steps)
-
-my_q_network = tf.keras.models.Sequential([
-    tf.keras.layers.Input((3)),
-    tf.keras.layers.Dense(1, activation = "sigmoid" )
-])
-my_q_network.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
-
-Tensor_input = tf.convert_to_tensor(np.array([y[0] for y in [np.asarray(x) for x in time_step1.observation]]))
-Tensor_input = tf.expand_dims(Tensor_input, axis=0)
-print("Input Data: ", Tensor_input)
-p = my_q_network.predict(Tensor_input)
-print("Predict: ", p)
-
-
-# my_q_network = QNetwork(
-#     input_tensor_spec=input_tensor_spec2,
-#     action_spec=action_spec)
+##############################################################
+# my_q_network = tf.keras.models.Sequential([
+#     tf.keras.layers.Input((3)),
+#     tf.keras.layers.Dense(1, activation = "sigmoid" )
+# ])
+# my_q_network.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
 #
-# my_q_policy = q_policy.QPolicy(
-#     time_step_spec, action_spec, q_network=my_q_network)
-#
-# action_step = my_q_policy.action(time_steps)
-# distribution_step = my_q_policy.distribution(time_steps)
-#
-# print('Action:')
-# print(action_step.action)
-#
-# print('Action distribution:')
-# print(distribution_step.action)
+# Tensor_input = tf.convert_to_tensor(np.array([y[0] for y in [np.asarray(x) for x in time_step1.observation]]))
+# Tensor_input = tf.expand_dims(Tensor_input, axis=0)
+# print("Input Data: ", Tensor_input)
+# p = my_q_network.predict(Tensor_input)
+# print("Predict: ", p)
+##############################################################
+##############################################################
+my_q_network = QNetwork(
+    input_tensor_spec=input_tensor_spec,
+    action_spec=action_spec)
+
+my_q_policy = q_policy.QPolicy(
+    time_step_spec, action_spec, q_network=my_q_network)
+
+print("Sending Time Step: ", time_step)
+
+action_step = my_q_policy.action(time_step)
+distribution_step = my_q_policy.distribution(time_step)
+
+print('Action:')
+print(action_step.action)
+
+print('Action distribution:')
+print(distribution_step.action)
+##############################################################
