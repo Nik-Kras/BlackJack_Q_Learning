@@ -6,6 +6,7 @@ from tf_agents.trajectories import time_step as ts
 from tf_agents.policies import q_policy
 from tf_agents.specs import tensor_spec
 import tensorflow as tf
+import numpy as np
 
 env = suite_gym.load("Blackjack-v1")
 
@@ -74,6 +75,9 @@ print("time_step_spec: ", tf_env.time_step_spec())
 print("action_spec: ", tf_env.action_spec())
 
 input_tensor_spec = tf_env.observation_spec()
+input_tensor_spec2 = ([tf.TensorSpec(1)] * 3, )
+
+print("input_tensor_spec2: ", input_tensor_spec2)
 time_step_spec = tf_env.time_step_spec()
 action_spec = tf_env.action_spec()
 
@@ -96,6 +100,7 @@ class QNetwork(network.Network):
         state_spec=(),
         name=name)
     self._sub_layers = [
+        # tf.keras.layers.Input((3,)),
         tf.keras.layers.Dense(num_actions),
     ]
 
@@ -119,16 +124,31 @@ print("---- 2 batch Time Step: ", time_steps)
 
 print(time_steps)
 
-my_q_network = QNetwork(
-    input_tensor_spec=input_tensor_spec,
-    action_spec=action_spec)
-my_q_policy = q_policy.QPolicy(
-    time_step_spec, action_spec, q_network=my_q_network)
-action_step = my_q_policy.action(time_steps)
-distribution_step = my_q_policy.distribution(time_steps)
+my_q_network = tf.keras.models.Sequential([
+    tf.keras.layers.Input((3)),
+    tf.keras.layers.Dense(1, activation = "sigmoid" )
+])
+my_q_network.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
 
-print('Action:')
-print(action_step.action)
+Tensor_input = tf.convert_to_tensor(np.array([y[0] for y in [np.asarray(x) for x in time_step1.observation]]))
+Tensor_input = tf.expand_dims(Tensor_input, axis=0)
+print("Input Data: ", Tensor_input)
+p = my_q_network.predict(Tensor_input)
+print("Predict: ", p)
 
-print('Action distribution:')
-print(distribution_step.action)
+
+# my_q_network = QNetwork(
+#     input_tensor_spec=input_tensor_spec2,
+#     action_spec=action_spec)
+#
+# my_q_policy = q_policy.QPolicy(
+#     time_step_spec, action_spec, q_network=my_q_network)
+#
+# action_step = my_q_policy.action(time_steps)
+# distribution_step = my_q_policy.distribution(time_steps)
+#
+# print('Action:')
+# print(action_step.action)
+#
+# print('Action distribution:')
+# print(distribution_step.action)
