@@ -69,17 +69,24 @@ print("----------------------- Deep Q-Learning ---------------------------")
 print("|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||")
 print("")
 
-print(tf_env.observation_spec())
-print(tf_env.time_step_spec())
+print("observation_spec: ", tf_env.observation_spec())
+print("time_step_spec: ", tf_env.time_step_spec())
+print("action_spec: ", tf_env.action_spec())
 
-input_tensor_spec = tensor_spec.TensorSpec((4,), tf.float32)
-time_step_spec = ts.time_step_spec(input_tensor_spec)
-action_spec = tensor_spec.BoundedTensorSpec((),
-                                            tf.int32,
-                                            minimum=0,
-                                            maximum=2)
+input_tensor_spec = tf_env.observation_spec()
+time_step_spec = tf_env.time_step_spec()
+action_spec = tf_env.action_spec()
+
+# input_tensor_spec = tensor_spec.TensorSpec((4,), tf.float32)
+# time_step_spec = ts.time_step_spec(input_tensor_spec)
+# action_spec = tensor_spec.BoundedTensorSpec((),
+#                                             tf.int32,
+#                                             minimum=0,
+#                                             maximum=2)
+
+# Create array of 3 <tf.Tensor: shape=(1,), dtype=int64, numpy=array([17], dtype=int64)> and put them to Q-Network
+
 num_actions = action_spec.maximum - action_spec.minimum + 1
-
 
 class QNetwork(network.Network):
 
@@ -100,9 +107,17 @@ class QNetwork(network.Network):
     return inputs, network_state
 
 
-batch_size = 2
-observation = tf.ones([batch_size] + time_step_spec.observation.shape.as_list())
-time_steps = ts.restart(observation, batch_size=batch_size)
+# batch_size = 2
+# observation = tf.ones([batch_size] + time_step_spec.observation.shape.as_list())
+# time_steps = ts.restart(observation, batch_size=batch_size)
+
+time_step1 = tf_env.reset()
+time_step2 = tf_env.reset()
+print("---- Real Time Step: ", time_step1)
+time_steps = time_step1 # [time_step1, time_step2]
+print("---- 2 batch Time Step: ", time_steps)
+
+print(time_steps)
 
 my_q_network = QNetwork(
     input_tensor_spec=input_tensor_spec,
