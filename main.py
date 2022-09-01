@@ -152,6 +152,7 @@ my_q_network = QNetwork(
 my_q_policy = q_policy.QPolicy(
     time_step_spec, action_spec, q_network=my_q_network)
 
+time_step = ts.restart(time_step.observation)
 print("Sending Time Step: ", time_step)
 
 action_step = my_q_policy.action(time_step)
