@@ -4,6 +4,7 @@ from tf_agents.environments import suite_gym
 from tf_agents.environments import utils
 from tf_agents.trajectories import time_step as ts
 from tf_agents.policies import q_policy
+from tf_agents.networks import q_network
 from tf_agents.agents import DqnAgent
 from tf_agents.utils import common
 from tf_agents.replay_buffers import tf_uniform_replay_buffer
@@ -106,56 +107,56 @@ print("----  MY OWN Observation: ", my_observation)
 
 # Create array of 3 <tf.Tensor: shape=(1,), dtype=int64, numpy=array([17], dtype=int64)> and put them to Q-Network
 
-num_actions = action_spec.maximum - action_spec.minimum + 1
-
-class QNetwork(network.Network):
-
-  def __init__(self, input_tensor_spec, action_spec, num_actions=num_actions, name=None):
-    super(QNetwork, self).__init__(
-        input_tensor_spec=input_tensor_spec,
-        state_spec=(),
-        name=name)
-    self._sub_layers = [
-        # tf.keras.layers.Input((3,)),
-        tf.keras.layers.Dense(num_actions),
-    ]
-
-  def call(self, inputs, step_type=None, network_state=()):
-    del step_type
-    print("called input: ", inputs)
-    my_observation = tf.convert_to_tensor(np.array([y[0] for y in inputs]))
-    my_observation = tf.expand_dims(my_observation, axis=0)
-    print("my_observation: ", my_observation)
-    inputs = tf.cast(my_observation, tf.float32)
-    print("Final input: ", inputs)
-    for layer in self._sub_layers:
-      inputs = layer(inputs)
-    print("Q-Values: ", inputs)
-    return inputs, network_state
+# num_actions = action_spec.maximum - action_spec.minimum + 1
+#
+# class QNetwork(network.Network):
+#
+#   def __init__(self, input_tensor_spec, action_spec, num_actions=num_actions, name=None):
+#     super(QNetwork, self).__init__(
+#         input_tensor_spec=input_tensor_spec,
+#         state_spec=(),
+#         name=name)
+#     self._sub_layers = [
+#         # tf.keras.layers.Input((3,)),
+#         tf.keras.layers.Dense(num_actions),
+#     ]
+#
+#   def call(self, inputs, step_type=None, network_state=()):
+#     del step_type
+#     print("called input: ", inputs)
+#     my_observation = tf.convert_to_tensor(np.array([y[0] for y in inputs]))
+#     my_observation = tf.expand_dims(my_observation, axis=0)
+#     print("my_observation: ", my_observation)
+#     inputs = tf.cast(my_observation, tf.float32)
+#     print("Final input: ", inputs)
+#     for layer in self._sub_layers:
+#       inputs = layer(inputs)
+#     print("Q-Values: ", inputs)
+#     return inputs, network_state
 
 # batch_size = 2
 # observation = tf.ones([batch_size] + time_step_spec.observation.shape.as_list())
 # time_steps = ts.restart(observation, batch_size=batch_size)
 
 ##############################################################
-my_q_network = QNetwork(
-    input_tensor_spec=tf_env.observation_spec(),
-    action_spec=tf_env.action_spec())
-
-my_q_policy = q_policy.QPolicy(
-    time_step_spec, action_spec, q_network=my_q_network)
-
-time_step = ts.restart(time_step.observation)
-print("Sending Time Step: ", time_step)
-
-action_step = my_q_policy.action(time_step)
-distribution_step = my_q_policy.distribution(time_step)
-
-print('Action:')
-print(action_step.action)
-
-print('Action distribution:')
-print(distribution_step.action)
+# my_q_network = QNetwork(
+#     input_tensor_spec=tf_env.observation_spec(),
+#     action_spec=tf_env.action_spec())
+#
+# my_q_policy = q_policy.QPolicy(
+#     time_step_spec, action_spec, q_network=my_q_network)
+#
+# time_step = ts.restart(time_step.observation)
+# print("Sending Time Step: ", time_step)
+#
+# action_step = my_q_policy.action(time_step)
+# distribution_step = my_q_policy.distribution(time_step)
+#
+# print('Action:')
+# print(action_step.action)
+#
+# print('Action distribution:')
+# print(distribution_step.action)
 ##############################################################
 print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 print("!!!!!! Agent")
@@ -211,12 +212,49 @@ print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 #     action_spec = tf_env.action_spec(),
 #     num_actions = 2)
 
+class QNetwork(network.Network):
+
+  def __init__(self, input_tensor_spec, action_spec, num_actions=2, name=None):
+    super(QNetwork, self).__init__(
+        input_tensor_spec=input_tensor_spec,
+        state_spec=(),
+        name=name)
+    self._sub_layers = [
+        # tf.keras.layers.Input((3,)),
+        tf.keras.layers.Dense(num_actions),
+    ]
+
+  def call(self, inputs, step_type=None, network_state=()):
+    del step_type
+    print("called input: ", inputs)
+    my_observation = tf.convert_to_tensor(np.array([y[0] for y in inputs]))
+    my_observation = tf.expand_dims(my_observation, axis=0)
+    print("my_observation: ", my_observation)
+    inputs = tf.cast(my_observation, tf.float32)
+    print("Final input: ", inputs)
+    for layer in self._sub_layers:
+        inputs = layer(inputs)
+    print("Q-Values: ", inputs)
+    return inputs, network_state
+
+my_q_network = QNetwork(
+    input_tensor_spec = tf_env.observation_spec(),
+    action_spec = tf_env.action_spec())
+
+q_net = q_network.QNetwork(
+  tf_env.observation_spec(),
+  tf_env.action_spec(),
+  fc_layer_params=(100,),
+  preprocessing_combiner = tf.keras.layers.Concatenate(axis=-1),
+)
+
+
 learning_rate = 1e-3
 train_step_counter = tf.Variable(0)
 agent = DqnAgent(
     time_step_spec = time_step_spec,
     action_spec = action_spec,
-    q_network = my_q_network,
+    q_network = q_net, #my_q_network,
     optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate),
     td_errors_loss_fn=common.element_wise_squared_loss,
     train_step_counter=train_step_counter
